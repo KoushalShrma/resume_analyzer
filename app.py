@@ -1,5 +1,5 @@
 import streamlit as st
-import PyPDF2
+from pypdf import PdfReader
 import docx
 import re
 from groq import Groq
@@ -28,10 +28,11 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 # --------------------------------------------------
 def extract_text_from_pdf(uploaded_file):
     text = ""
-    reader = PyPDF2.PdfReader(uploaded_file)
+    reader = PdfReader(uploaded_file)
     for page in reader.pages:
-        if page.extract_text():
-            text += page.extract_text()
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text
     return text
 
 
@@ -133,21 +134,21 @@ if st.button("🔍 Analyze Resume"):
             required_skills = extract_skills_from_job_description(job_description)
             matched, missing, score = analyze_resume(resume_text, required_skills)
 
-        st.subheader("Required Skills")
+        st.subheader("📌 Required Skills")
         st.write(required_skills)
 
-        st.subheader("Matched Skills")
+        st.subheader("✅ Matched Skills")
         st.write(matched)
 
-        st.subheader("Missing Skills")
+        st.subheader("❌ Missing Skills")
         st.write(missing)
 
-        st.subheader("Resume Match Score")
+        st.subheader("📈 Resume Match Score")
         st.metric("Match Percentage", f"{score:.2f}%")
 
         if score >= 70:
-            st.success("Strong Match")
+            st.success("🟢 Strong Match")
         elif score >= 40:
-            st.warning("Moderate Match")
+            st.warning("🟡 Moderate Match")
         else:
-            st.error("Weak Match")
+            st.error("🔴 Weak Match")
