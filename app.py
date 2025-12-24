@@ -2,7 +2,7 @@ import streamlit as st
 import PyPDF2
 import docx
 import re
-from groq importmmmm Groq
+from groq import Groq
 
 # --------------------------------------------------
 # PAGE CONFIG
