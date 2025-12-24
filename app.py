@@ -51,16 +51,13 @@ def extract_text(uploaded_file):
         return ""
 
 # --------------------------------------------------
-# MODEL SELECTION (DYNAMIC & FUTURE-PROOF)
+# GROQ CHAT MODEL SELECTION (SAFE)
 # --------------------------------------------------
 def get_chat_model():
-    """
-    Select a Groq model that supports chat completions.
-    """
     preferred_models = [
         "llama3-8b-8192",
         "llama-3.1-8b-instant",
-        "mixtral-8x7b-32768"
+        "mixtral-8x7b-32768",
     ]
 
     available_models = [m.id for m in client.models.list().data]
@@ -69,8 +66,24 @@ def get_chat_model():
         if model in available_models:
             return model
 
-    raise RuntimeError("No supported chat model available on Groq.")
+    raise RuntimeError("No supported Groq chat model available.")
 
+# --------------------------------------------------
+# SKILL NORMALIZATION (CRITICAL FIX)
+# --------------------------------------------------
+def normalize_skills(skills_text):
+    skills_text = skills_text.lower()
+    skills_text = skills_text.replace("(", "").replace(")", "")
+
+    raw_skills = skills_text.split(",")
+
+    cleaned_skills = set()
+    for skill in raw_skills:
+        skill = skill.strip()
+        if skill:
+            cleaned_skills.add(skill)
+
+    return list(cleaned_skills)
 
 # --------------------------------------------------
 # LLM: SKILL EXTRACTION FROM JOB DESCRIPTION
@@ -90,15 +103,14 @@ def extract_skills_from_job_description(job_description):
         model=model_name,
         messages=[
             {"role": "system", "content": "You extract skills for resume screening."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
         ],
         temperature=0.2,
-        max_tokens=256
+        max_tokens=256,
     )
 
     skills_text = response.choices[0].message.content
-    return [s.strip().lower() for s in skills_text.split(",") if s.strip()]
-
+    return normalize_skills(skills_text)
 
 # --------------------------------------------------
 # RESUME ANALYSIS LOGIC (DETERMINISTIC)
@@ -110,6 +122,7 @@ def clean_text(text):
 
 def analyze_resume(resume_text, required_skills):
     resume_text = clean_text(resume_text)
+
     matched_skills = []
     missing_skills = []
 
