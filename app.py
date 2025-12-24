@@ -53,38 +53,52 @@ def extract_text(uploaded_file):
 # --------------------------------------------------
 # MODEL SELECTION (DYNAMIC & FUTURE-PROOF)
 # --------------------------------------------------
-def get_available_text_model():
-    models = client.models.list().data
-    for model in models:
-        if "vision" not in model.id.lower():
-            return model.id
-    raise RuntimeError("No suitable text model available.")
+def get_chat_model():
+    """
+    Select a Groq model that supports chat completions.
+    """
+    preferred_models = [
+        "llama3-8b-8192",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768"
+    ]
+
+    available_models = [m.id for m in client.models.list().data]
+
+    for model in preferred_models:
+        if model in available_models:
+            return model
+
+    raise RuntimeError("No supported chat model available on Groq.")
+
 
 # --------------------------------------------------
 # LLM: SKILL EXTRACTION FROM JOB DESCRIPTION
 # --------------------------------------------------
 def extract_skills_from_job_description(job_description):
     job_description = job_description[:6000]  # safety trim
-    model_name = get_available_text_model()
+    model_name = get_chat_model()
 
-    prompt = f"""
-    You are an ATS system.
-    Extract ONLY important technical skills and tools from the job description below.
-    Return ONLY a comma-separated list.
-    Do not include explanations.
-
-    Job Description:
-    {job_description}
-    """
+    prompt = (
+        "You are an ATS system.\n"
+        "Extract ONLY important technical skills and tools from the job description below.\n"
+        "Return ONLY a comma-separated list.\n\n"
+        f"Job Description:\n{job_description}"
+    )
 
     response = client.chat.completions.create(
         model=model_name,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2
+        messages=[
+            {"role": "system", "content": "You extract skills for resume screening."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_tokens=256
     )
 
     skills_text = response.choices[0].message.content
-    return [skill.strip().lower() for skill in skills_text.split(",") if skill.strip()]
+    return [s.strip().lower() for s in skills_text.split(",") if s.strip()]
+
 
 # --------------------------------------------------
 # RESUME ANALYSIS LOGIC (DETERMINISTIC)
